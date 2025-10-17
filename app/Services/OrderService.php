@@ -34,18 +34,7 @@ class OrderService
             $queryBuilder->where('order_status', $orderStatus);
         }
         $orders = $queryBuilder->paginate($perPage, ['*'], 'page', $page);
-        return [
-            'status' => true,
-            'message' => 'Orders retrieved successfully',
-            'code' => 200,
-            'data' => [
-                'items' => $orders->items(),
-                'current_page' => $orders->currentPage(),
-                'last_page' => $orders->lastPage(),
-                'per_page' => $orders->perPage(),
-                'total' => $orders->total()
-            ]
-        ];
+        return $orders;
     }
 
     public function getOrderDetail($id, $user)
@@ -55,13 +44,8 @@ class OrderService
         if (isset($order['status']) && $order['status'] == false) {
             return $order;
         }
-        if ($order->user_id !== $user->id) {
-            return [
-                'status' => false,
-                'message' => 'You do not have access to this order.',
-                'code' => 403
-            ];
-        }
+        $res = $this->checkUserOrder($order, $user);
+        if($res !== true) { return $res; }
         return [
             'status' => true,
             'message' => 'Orders details retrieved successfully',
@@ -76,6 +60,7 @@ class OrderService
             $data['customer_name'] = $user->name;
         }
         $data['user_id'] = $user->id;
+        $data['order_status'] = $data['order_status'] ?? 'pending';
         $order = DB::transaction(function () use ($data) {
             $total = collect($data['order_items'])->sum(fn($item) => $item['quantity'] * $item['price']);
             $data['total_amount'] = $total;

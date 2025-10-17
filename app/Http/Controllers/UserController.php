@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\Request;
@@ -24,14 +25,19 @@ class UserController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'User registered successfully',
-            'data' => $user,
+            'data' => new UserResource($user),
         ], 201);
     }
 
     public function login(LoginRequest $request)
-    {
+    {   
         $response = $this->userService->login($request->validated());
+        $userData = $response['data'] ?? [];
 
+        if(isset($userData['user']) && !empty($userData['user']))
+        {
+            $response['data']['user'] = new UserResource($userData['user']);
+        }
         return response()->json([
             'status' => $response['status'],
             'message' => $response['message'],
